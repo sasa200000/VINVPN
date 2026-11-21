@@ -14,6 +14,7 @@ import com.ffvpn.client.core.LogRetention
 import com.ffvpn.client.core.NetworkMonitor
 import com.ffvpn.client.core.OpenRungCore
 import com.ffvpn.client.core.Prefs
+import com.ffvpn.client.core.ProtonCore
 import com.ffvpn.client.core.PsiphonCore
 import com.ffvpn.client.core.SstpCore
 import com.ffvpn.client.core.SunAndLionCore
@@ -38,6 +39,7 @@ class App : Application() {
         CoreRegistry.register(FirefoxCore())
         CoreRegistry.register(AetherCore())
         CoreRegistry.register(WarpCore())
+        CoreRegistry.register(ProtonCore())
         CoreRegistry.register(PsiphonCore())
         CoreRegistry.register(SunAndLionCore())
         CoreRegistry.register(SstpCore())

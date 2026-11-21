@@ -47,6 +47,31 @@
             android:theme="@style/AppTheme"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".ProtonSignInActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- AmneziaWG runs out of this process: its Go runtime must never load
+             next to the main process's, and the library's VpnService hands the
+             TUN to its GoBackend through a static future, so the two have to
+             share the process. -->
+        <service
+            android:name="com.ffvpn.client.core.proton.AwgHostService"
+            android:exported="false"
+            android:process=":awg" />
+
+        <service
+            android:name="org.amnezia.awg.backend.AbstractBackend$VpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:process=":awg">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".service.ProxyService"
             android:exported="false"

@@ -100,6 +100,11 @@ dependencies {
     // the whole process down with "panic: close of closed channel".
     implementation(files("libs/ca.psiphon.aar"))
 
+    // AmneziaWG for the Proton core: the tunnel backend (libam-go) and, with it,
+    // okhttp (the Proton account API) and the WebView proxy override support.
+    implementation("com.zaneschepke:amneziawg-android:2.1.13")
+    implementation("androidx.webkit:webkit:1.11.0")
+
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")

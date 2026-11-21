@@ -283,7 +283,7 @@ class TunnelVpnService : VpnService() {
                     AppState.update { it.copy(statusCode = 1002, statusDetail = Texts.verifyingTunnel) }
                 }
             }
-            val reach = Reachability.verify(selected.proxyAddress) { stopping || stale(gen) }
+            val reach = selected.verifyTraffic { stopping || stale(gen) }
             if (stopping || stale(gen)) {
                 selected.stopVpn()
                 return@execute
@@ -306,13 +306,13 @@ class TunnelVpnService : VpnService() {
                             connected = true,
                             statusCode = 1004,
                             statusDetail = "",
-                            proxy = Prefs.socksAddress
+                            proxy = if (selected.directTunnel) "" else Prefs.socksAddress
                         )
                     )
                 }
                 AppState.log("VPN up, core=${selected.id}, socks=$coreProxy")
                 ExitProbe.start()
-                if (Prefs.shareLan) {
+                if (Prefs.shareLan && !selected.directTunnel) {
                     ProxyFront.start(coreProxy)
                     LanShare.start(coreProxy)
                 }
@@ -321,10 +321,14 @@ class TunnelVpnService : VpnService() {
                     Notifications.build(this, Texts.appName, Texts.notificationVpn)
                 )
                 ConnectSound.ping(this)
-                TunnelWatchdog.start(
-                    Prefs.socksPort,
-                    selected.trafficProbeTimeoutMs
-                ) { fail(StatusText.NO_TRAFFIC, "no traffic through the tunnel", gen) }
+                // A direct-tunnel core publishes no SOCKS port: probing one
+                // would strike a tunnel that is carrying traffic just fine.
+                if (!selected.directTunnel) {
+                    TunnelWatchdog.start(
+                        Prefs.socksPort,
+                        selected.trafficProbeTimeoutMs
+                    ) { fail(StatusText.NO_TRAFFIC, "no traffic through the tunnel", gen) }
+                }
             }
         }
     }

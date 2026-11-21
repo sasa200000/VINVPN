@@ -37,6 +37,23 @@ interface VpnCore {
     val blockedOnUser: Boolean
         get() = false
 
+    /**
+     * True when the core takes the device's TUN itself and publishes no local
+     * SOCKS listener: its WireGuard tunnel IS the interface, so there is no
+     * port for the service's usual probe or watchdog to dial.
+     */
+    val directTunnel: Boolean
+        get() = false
+
+    /**
+     * Blocking. How the service proves this core's tunnel carries traffic
+     * before calling it connected. The default asks the core's own local
+     * SOCKS the usual way; a [directTunnel] core answers from its own tunnel
+     * instead (there is no listener to dial).
+     */
+    fun verifyTraffic(cancelled: () -> Boolean): Reachability.Outcome =
+        Reachability.verify(proxyAddress, cancelled)
+
     fun init(context: Context)
 
     /** Called by the VpnService so outbound sockets bypass the tun. */

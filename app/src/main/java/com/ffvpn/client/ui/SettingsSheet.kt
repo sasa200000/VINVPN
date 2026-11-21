@@ -53,6 +53,8 @@ import com.ffvpn.client.AppLocale
 import com.ffvpn.client.BuildConfig
 import com.ffvpn.client.R
 import com.ffvpn.client.Texts
+import com.ffvpn.client.ProtonSignInActivity
+import com.ffvpn.client.core.proton.ProtonApi
 import com.ffvpn.client.WebSignInActivity
 import com.ffvpn.client.core.AppState
 import com.ffvpn.client.core.CoreRegistry
@@ -573,6 +575,47 @@ fun SettingsSheet(
                             }
                         )
                     )
+                }
+            }
+
+            Section(Texts.protonSection, Texts.protonSectionHint) {
+                var protonSigned by remember { mutableStateOf(false) }
+                var protonTick by remember { mutableStateOf(0) }
+                LaunchedEffect(protonTick) {
+                    protonSigned = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { ProtonApi.signedIn() }.getOrDefault(false)
+                    }
+                }
+                val protonPage = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartActivity()
+                ) { protonTick++ }
+                Text(
+                    text = if (protonSigned) Texts.protonSignedIn else Texts.protonNotSignedIn,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (protonSigned) {
+                        MaterialTheme.colorScheme.tertiary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = {
+                            protonPage.launch(Intent(context, ProtonSignInActivity::class.java))
+                        },
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f)
+                    ) { Text(Texts.protonSignInAction) }
+                    if (protonSigned) {
+                        TextButton(
+                            onClick = {
+                                runCatching { ProtonApi.forgetSession() }
+                                protonTick++
+                            },
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f)
+                        ) { Text(Texts.protonSignOut) }
+                    }
                 }
             }
 

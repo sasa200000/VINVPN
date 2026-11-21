@@ -128,10 +128,85 @@ object Texts {
             "El motor que lleva el túnel. Firefox usa tu cuenta; los demás no piden sesión."
         )
 
+    // ── Proton ────────────────────────────────────────────────────────────────
+    val protonSection = p("Proton account", "حساب پروتون", "Аккаунт Proton", "Cuenta Proton")
+    val protonSectionHint = p(
+        "A free Proton account, created or signed in inside the app; the app then takes the free servers itself.",
+        "حساب رایگان پروتون، ساخته یا وارد شده داخل اپ؛ بعد اپ سرورهای رایگان را خودش برمی‌دارد.",
+        "Бесплатный аккаунт Proton — создайте или войдите в приложении; серверы приложение возьмёт само.",
+        "Cuenta Proton gratuita, creada o iniciada en la app; la app toma los servidores gratis."
+    )
+    val protonNotSignedIn = p("Not signed in", "وارد نشده‌اید", "Не вошли", "Sin sesión")
+    val protonSignedIn = p("Signed in to Proton", "وارد حساب پروتون شده‌اید", "Вы вошли в Proton", "Sesión iniciada en Proton")
+    val protonSignInAction = p("Create account / Sign in", "ایجاد حساب / ورود", "Создать аккаунт / Войти", "Crear cuenta / Entrar")
+    val protonSignOut = p("Sign out", "خروج از حساب", "Выйти", "Cerrar sesión")
+    val protonSignInNeeded = p(
+        "Sign in to Proton in Settings first",
+        "ابتدا از تنظیمات وارد حساب پروتون شوید",
+        "Сначала войдите в Proton в настройках",
+        "Primero inicia sesión en Proton en Ajustes"
+    )
+    val protonVpnOnly = p(
+        "Proton runs in VPN mode only",
+        "پروتون فقط در حالت VPN کار می‌کند",
+        "Proton работает только в режиме VPN",
+        "Proton solo funciona en modo VPN"
+    )
+    val protonFetching = p(
+        "Getting Proton servers...",
+        "دریافت سرورهای پروتون...",
+        "Получение серверов Proton...",
+        "Obteniendo servidores Proton..."
+    )
+    val protonNoServers = p(
+        "No Proton servers yet — sign in again so the app can fetch them",
+        "هنوز سروری از پروتون نیست — دوباره وارد شوید تا اپ سرورها را بگیرد",
+        "Серверов Proton пока нет — войдите снова, чтобы приложение их получило",
+        "Aún no hay servidores Proton: entra de nuevo para que la app los obtenga"
+    )
+    val protonSignInHint = p(
+        "Proton's site is filtered in Iran: turn on any other engine first, then sign in.",
+        "سایت پروتون در ایران فیلتر است: ابتدا یک موتور دیگر را روشن کنید، بعد وارد شوید.",
+        "Сайт Proton заблокирован в Иране: сначала включите другой движок, затем войдите.",
+        "El sitio de Proton está filtrado en Irán: enciende otro motor primero y luego entra."
+    )
+    val protonGettingServers = p(
+        "Taking the free servers...",
+        "دریافت سرورهای رایگان...",
+        "Забираем бесплатные серверы...",
+        "Tomando los servidores gratis..."
+    )
+    val protonGotServers = p(
+        "Free servers saved",
+        "سرورهای رایگان ذخیره شد",
+        "Бесплатные серверы сохранены",
+        "Servidores gratis guardados"
+    )
+    val actionCancel = p("Cancel", "انصراف", "Отмена", "Cancelar")
+    val protonProxyNote = p(
+        "This WebView cannot use a proxy — the page may not open here",
+        "این WebView قابلیت پروکسی ندارد — شاید صفحه باز نشود",
+        "Этот WebView не поддерживает прокси — страница может не открыться",
+        "Este WebView no admite proxy: puede que la página no abra"
+    )
+    val protonContinue = p(
+        "Take the free servers and finish",
+        "دریافت سرورهای رایگان و پایان",
+        "Забрать бесплатные серверы и закончить",
+        "Tomar los servidores gratis y terminar"
+    )
+    val protonFetchFailed = p(
+        "Could not fetch servers",
+        "دریافت سرورها ناموفق بود",
+        "Не удалось получить серверы",
+        "No se pudieron obtener los servidores"
+    )
+
     /** The engine behind each core, shown plainly in the picker. */
     fun coreName(id: String): String = when (id) {
         "aether" -> p("Aether", "اتر", "Эфир", "Aether")
         "warp" -> p("WARP", "وارپ", "WARP", "WARP")
+        "proton" -> p("Proton", "پروتون", "Proton", "Proton")
         "psiphon" -> p("Psiphon", "سایفون", "Псифон", "Psiphon")
         "sunlion" -> p("Sun and Lion", "شیر و خورشید", "Солнце и Лев", "Sol y León")
         "sstp" -> p("SSTP", "اس‌اس‌تی‌پی", "SSTP", "SSTP")
