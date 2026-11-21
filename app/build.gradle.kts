@@ -127,6 +127,9 @@ dependencies {
         exclude(group = "androidx.core", module = "core")
     }
     implementation("androidx.webkit:webkit:1.11.0")
+    // Compile against okhttp directly: amneziawg carries it at runtime scope
+    // only, and the version is pinned to 4.12 above (metadata story there).
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")

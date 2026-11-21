@@ -262,7 +262,7 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
             }
         } else if (pageReady) {
             AndroidView(
-                factory = { view -> createPage(view) { loading = false } },
+                factory = { ctx -> createPage(ctx) { loading = false } },
                 update = { if (signedIn) it.stopLoading() },
                 modifier = Modifier.fillMaxSize()
             )
@@ -276,7 +276,8 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
  * screen reads.
  */
 @SuppressLint("SetJavaScriptEnabled")
-private fun createPage(view: WebView, onLoaded: () -> Unit): WebView {
+private fun createPage(context: Context, onLoaded: () -> Unit): WebView {
+    val view = WebView(context)
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
     view.settings.mediaPlaybackRequiresUserGesture = false
