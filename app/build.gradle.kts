@@ -21,9 +21,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = rootProject.file("signing/vinvpn.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            storePassword = "VinVpn!2026"
+            keyAlias = "vinvpn"
+            keyPassword = "VinVpn!2026"
         }
     }
 
