@@ -21,6 +21,7 @@ import com.ffvpn.client.core.SunAndLionCore
 import com.ffvpn.client.core.TorCore
 import com.ffvpn.client.core.WarpCore
 import com.ffvpn.client.ui.Neon
+import com.ffvpn.client.ui.ThemeState
 
 class App : Application() {
     override fun onCreate() {
@@ -34,6 +35,8 @@ class App : Application() {
         // image build date, and the engines are handed this bundle instead.
         CaBundle.prepare(this)
         Prefs.init(this)
+        // The page-wide theme is one piece of state; seed it before any screen composes.
+        ThemeState.name = runCatching { Prefs.themeColor }.getOrDefault("")
         Neon.load()
         // Firefox stays the default engine; the ported cores follow it in the picker.
         CoreRegistry.register(FirefoxCore())

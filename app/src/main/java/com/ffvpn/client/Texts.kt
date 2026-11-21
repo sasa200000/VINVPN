@@ -128,6 +128,44 @@ object Texts {
             "El motor que lleva el túnel. Firefox usa tu cuenta; los demás no piden sesión."
         )
 
+    // ── Appearance and sound ──────────────────────────────────────────────────
+    val themeSection = p(
+        "Appearance and sound",
+        "ظاهر و صدا",
+        "Вид и звук",
+        "Apariencia y sonido"
+    )
+    val themeHint = p(
+        "One color across every screen, and the sound the tunnel makes when it comes up.",
+        "یک رنگ برای همه صفحه‌ها و صدایی که هنگام وصل‌شدن تونل می‌آید.",
+        "Один цвет для всех экранов и звук при подключении туннеля.",
+        "Un color para todas las pantallas y el sonido al conectar el túnel."
+    )
+
+    fun themeName(key: String): String = when (key) {
+        "pink" -> p("Pink", "صورتی", "Розовый", "Rosa")
+        "green" -> p("Green", "سبز", "Зелёный", "Verde")
+        "orange" -> p("Orange", "نارنجی", "Оранжевый", "Naranja")
+        "ruby" -> p("Ruby", "یاقوتی", "Рубиновый", "Rubí")
+        "purple" -> p("Purple", "بنفش", "Фиолетовый", "Morado")
+        else -> p("Default (lotus)", "پیشفرض (لوتوس)", "По умолчанию (лотос)", "Predeterminado (loto)")
+    }
+
+    val toneLabel = p(
+        "Sound when connecting",
+        "صدای هنگام اتصال",
+        "Звук при подключении",
+        "Sonido al conectar"
+    )
+
+    fun toneName(key: String): String = when (key) {
+        "tick" -> p("Tick", "تیک", "Тик", "Clic")
+        "chime" -> p("Chime", "آهنگ", "Мелодия", "Melodía")
+        "rise" -> p("Rise", "صعود", "Восход", "Ascenso")
+        "bell" -> p("Bell", "زنگ", "Колокол", "Campana")
+        else -> p("Classic", "کلاسیک", "Классика", "Clásico")
+    }
+
     // ── Proton ────────────────────────────────────────────────────────────────
     val protonSection = p("Proton account", "حساب پروتون", "Аккаунт Proton", "Cuenta Proton")
     val protonSectionHint = p(

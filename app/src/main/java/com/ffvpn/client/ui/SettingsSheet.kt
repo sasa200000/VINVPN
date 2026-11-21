@@ -1,5 +1,11 @@
 package com.ffvpn.client.ui
 
+import com.ffvpn.client.service.ConnectSound
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -11,6 +17,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -397,6 +404,98 @@ fun SettingsSheet(
                 SwitchRow(Texts.autoRetry, Texts.autoRetryHint, autoRetry) {
                     autoRetry = it
                     Prefs.autoRetry = it
+                }
+            }
+
+            Section(Texts.themeSection, Texts.themeHint) {
+                var tone by remember {
+                    mutableStateOf(runCatching { Prefs.connectTone }.getOrDefault("classic"))
+                }
+                Text(
+                    text = Texts.themeName(ThemeState.name),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.size(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // The swatch each theme is: its accent, straight from the
+                    // palette the whole page will take.
+                    listOf(
+                        "" to ThemeSwatches.default,
+                        "pink" to ThemeSwatches.pink,
+                        "green" to ThemeSwatches.green,
+                        "orange" to ThemeSwatches.orange,
+                        "ruby" to ThemeSwatches.ruby,
+                        "purple" to ThemeSwatches.purple,
+                    ).forEach { (key, color) ->
+                        val selected = ThemeState.name == key
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(
+                                    width = if (selected) 3.dp else 1.dp,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.outline
+                                    },
+                                    shape = CircleShape
+                                )
+                                .clickable {
+                                    ThemeState.name = key
+                                    Prefs.themeColor = key
+                                }
+                        )
+                    }
+                }
+                Spacer(Modifier.size(12.dp))
+                Text(
+                    text = Texts.toneLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    ConnectSound.TONES.forEach { key ->
+                        val selected = tone == key
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            } else {
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+                            },
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                                }
+                            ),
+                            modifier = Modifier.clickable {
+                                tone = key
+                                Prefs.connectTone = key
+                                // Hear it the moment it is chosen.
+                                ConnectSound.preview(context, key)
+                            }
+                        ) {
+                            Text(
+                                text = Texts.toneName(key),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
 

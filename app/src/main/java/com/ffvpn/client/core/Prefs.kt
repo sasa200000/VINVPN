@@ -22,6 +22,8 @@ object Prefs {
     private const val KEY_CORE = "core"
     private const val KEY_SHARE_LAN = "share_lan"
     private const val KEY_CONNECT_SOUND = "connect_sound"
+    private const val KEY_THEME_COLOR = "theme_color"
+    private const val KEY_CONNECT_TONE = "connect_tone"
     private const val KEY_AUTO_RETRY = "auto_retry"
     private const val KEY_TOR_BRIDGES = "tor_bridges"
     private const val KEY_PSIPHON_CONDUIT = "psiphon_conduit"
@@ -100,6 +102,23 @@ object Prefs {
         get() = prefs().getBoolean(KEY_CONNECT_SOUND, true)
         set(value) {
             prefs().edit().putBoolean(KEY_CONNECT_SOUND, value).apply()
+        }
+
+    /**
+     * The page-wide color theme; "" is the lotus default. Stored as the
+     * palette's name, read by [com.ffvpn.client.ui.ThemeState].
+     */
+    var themeColor: String
+        get() = prefs().getString(KEY_THEME_COLOR, "").orEmpty()
+        set(value) {
+            prefs().edit().putString(KEY_THEME_COLOR, value).apply()
+        }
+
+    /** Which sound the tunnel makes when it comes up; "classic" is the shipped chime. */
+    var connectTone: String
+        get() = prefs().getString(KEY_CONNECT_TONE, "classic").orEmpty().ifBlank { "classic" }
+        set(value) {
+            prefs().edit().putString(KEY_CONNECT_TONE, value).apply()
         }
 
     var autoRetry: Boolean
