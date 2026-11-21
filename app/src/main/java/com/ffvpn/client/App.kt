@@ -18,6 +18,7 @@ import com.ffvpn.client.core.PsiphonCore
 import com.ffvpn.client.core.SstpCore
 import com.ffvpn.client.core.SunAndLionCore
 import com.ffvpn.client.core.TorCore
+import com.ffvpn.client.core.WarpCore
 import com.ffvpn.client.ui.Neon
 
 class App : Application() {
