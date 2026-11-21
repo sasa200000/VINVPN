@@ -239,6 +239,24 @@ object Texts {
         "Proton запрашивает проверку: решите её на странице и нажмите Sign in",
         "Proton pide una verificación: resuélvela en la página y pulsa Sign in"
     )
+    val protonNeedFetch = p(
+        "Servers not fetched yet — open Proton account in Settings and press «Get free servers» (with any engine on)",
+        "سرورها هنوز دریافت نشده — از تنظیمات حساب پروتون را باز کنید و «دریافت سرورهای رایگان» را بزنید (با روشن بودن یک موتور)",
+        "Серверы ещё не получены: откройте аккаунт Proton в настройках и нажмите «Получить бесплатные серверы»",
+        "Aún no hay servidores: abre la cuenta en Ajustes y pulsa «Obtener servidores gratis»"
+    )
+    val protonGetServers = p(
+        "Get free servers",
+        "دریافت سرورهای رایگان",
+        "Получить бесплатные серверы",
+        "Obtener servidores gratis"
+    )
+    val protonSavedCount = p(
+        "Free servers saved: %d",
+        "سرورهای رایگان ذخیره‌شد: %d",
+        "Бесплатные серверы сохранены: %d",
+        "Servidores gratis guardados: %d"
+    )
     val protonRetry = p("Check again", "بررسی دوباره", "Проверить снова", "Comprobar de nuevo")
     val protonContinue = p(
         "Take the free servers and finish",

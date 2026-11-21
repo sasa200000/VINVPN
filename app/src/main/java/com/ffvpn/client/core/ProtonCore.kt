@@ -32,14 +32,19 @@ class ProtonCore : VpnCore {
     override val directTunnel: Boolean get() = true
 
     /**
-     * No session means another attempt cannot help until the user signs in —
-     * but [signedIn] reads cookies, and its first read loads the WebView, which
-     * must never happen on the main thread. The answer is therefore a cache:
-     * [connect] (a worker) refreshes it, and until it has, "blocked" stays off
-     * so a first failure simply takes the retry ladder's own course.
+     * Another attempt cannot help until the person acts: no session (the
+     * cookie read is a cache — [connect] refreshes it on its worker, and until
+     * it has, "blocked" stays off so a first failure takes the retry ladder's
+     * own course), or a session whose servers were never taken — that has to
+     * happen while a route reaches Proton, and at connect time there is none.
      */
     override val blockedOnUser: Boolean
-        get() = sessionChecked && !sessionPresent
+        get() {
+            if (!sessionChecked) return false
+            if (!sessionPresent) return true
+            val ctx = context ?: return false
+            return runCatching { ProtonStore(ctx).confs().isEmpty() }.getOrDefault(false)
+        }
 
     @Volatile
     private var sessionChecked = false
@@ -89,10 +94,19 @@ class ProtonCore : VpnCore {
 
         val store = ProtonStore(context!!)
         if (store.confs().isEmpty()) {
-            // Nothing saved yet — fetch now. Straight out: at this point no core
-            // is up (the service stopped the old one before asking this one), so
-            // on a filtered line this fails and says so; the sign-in screen
-            // fetches through the helper engine instead.
+            // Nothing saved yet. At this point no core is up — the service
+            // stopped the old one before asking this one — so a fetch here
+            // goes straight out, and on a filtered line the resolver answers
+            // with a sinkhole (10.x) that refuses the connection. Only fetch
+            // when the line itself reaches Proton; otherwise «دریافت سرورها»
+            // in Settings, taken while a route is up, is the way.
+            val direct = runCatching {
+                runBlocking { com.ffvpn.client.core.proton.ProtonAccess.reachable(null) }
+            }.getOrDefault(false)
+            if (!direct) {
+                AppState.log("engine proton: no route to Proton and no saved servers — not fetching")
+                return Texts.protonNeedFetch
+            }
             emit(1002, Texts.protonFetching, "")
             val out = runCatching { runBlocking { store.fetchAndSave(Proxy.NO_PROXY) } }.getOrNull()
             when (out) {

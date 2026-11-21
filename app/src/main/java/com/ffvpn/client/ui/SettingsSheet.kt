@@ -55,6 +55,8 @@ import com.ffvpn.client.BuildConfig
 import com.ffvpn.client.R
 import com.ffvpn.client.Texts
 import com.ffvpn.client.ProtonSignInActivity
+import com.ffvpn.client.core.ProtonStore
+import com.ffvpn.client.core.proton.ProtonAccess
 import com.ffvpn.client.core.proton.ProtonApi
 import com.ffvpn.client.WebSignInActivity
 import com.ffvpn.client.core.AppState
@@ -616,6 +618,64 @@ fun SettingsSheet(
                             enabled = !busy,
                             modifier = Modifier.weight(1f)
                         ) { Text(Texts.protonSignOut) }
+                    }
+                }
+                if (protonSigned) {
+                    var fetchingServers by remember { mutableStateOf(false) }
+                    var serverStatus by remember { mutableStateOf<String?>(null) }
+                    var serverStatusError by remember { mutableStateOf(false) }
+                    Spacer(Modifier.size(8.dp))
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                fetchingServers = true
+                                serverStatus = null
+                                val store = ProtonStore(context)
+                                val proxy = ProtonAccess.current()?.javaProxy()
+                                    ?: java.net.Proxy.NO_PROXY
+                                val out = runCatching { store.fetchAndSave(proxy) }.getOrNull()
+                                fetchingServers = false
+                                val (line, err) = when (out) {
+                                    is ProtonApi.Outcome.Got ->
+                                        Texts.protonSavedCount.replace("%d", out.confs.size.toString()) to false
+                                    is ProtonApi.Outcome.NothingNew ->
+                                        Texts.protonSavedCount.replace("%d", store.confs().size.toString()) to false
+                                    is ProtonApi.Outcome.NotSignedIn,
+                                    is ProtonApi.Outcome.Expired -> Texts.protonSignInNeeded to true
+                                    is ProtonApi.Outcome.Failed ->
+                                        "${Texts.protonFetchFailed}: ${out.detail}" to true
+                                    null -> Texts.protonFetchFailed to true
+                                }
+                                serverStatus = line
+                                serverStatusError = err
+                                AppState.log("proton fetch: $line")
+                            }
+                        },
+                        enabled = !fetchingServers && !busy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (fetchingServers) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.size(10.dp))
+                            Text(Texts.protonGettingServers)
+                        } else {
+                            Text(Texts.protonGetServers)
+                        }
+                    }
+                    serverStatus?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (serverStatusError) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.tertiary
+                            }
+                        )
                     }
                 }
             }

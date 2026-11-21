@@ -646,6 +646,18 @@ private suspend fun fetch(
     }
     val out = runCatching { store.fetchAndSave(proxy) }.getOrNull()
     onBusy(false)
+    // The log is where the next failure is read from — every outcome, not
+    // only the ones the screen can show.
+    AppState.log(
+        "proton sign-in fetch: " + when (out) {
+            is ProtonApi.Outcome.Got -> "${out.confs.size} servers"
+            is ProtonApi.Outcome.NothingNew -> "nothing new"
+            is ProtonApi.Outcome.NotSignedIn,
+            is ProtonApi.Outcome.Expired -> "not signed in / expired"
+            is ProtonApi.Outcome.Failed -> "failed: ${out.detail}"
+            null -> "store error"
+        }
+    )
     return out
 }
 
