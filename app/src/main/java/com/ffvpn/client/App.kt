@@ -36,6 +36,7 @@ class App : Application() {
         // Firefox stays the default engine; the ported cores follow it in the picker.
         CoreRegistry.register(FirefoxCore())
         CoreRegistry.register(AetherCore())
+        CoreRegistry.register(WarpCore())
         CoreRegistry.register(PsiphonCore())
         CoreRegistry.register(SunAndLionCore())
         CoreRegistry.register(SstpCore())

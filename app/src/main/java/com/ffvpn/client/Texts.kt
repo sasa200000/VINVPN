@@ -131,6 +131,7 @@ object Texts {
     /** The engine behind each core, shown plainly in the picker. */
     fun coreName(id: String): String = when (id) {
         "aether" -> p("Aether", "اتر", "Эфир", "Aether")
+        "warp" -> p("WARP", "وارپ", "WARP", "WARP")
         "psiphon" -> p("Psiphon", "سایفون", "Псифон", "Psiphon")
         "sunlion" -> p("Sun and Lion", "شیر و خورشید", "Солнце и Лев", "Sol y León")
         "sstp" -> p("SSTP", "اس‌اس‌تی‌پی", "SSTP", "SSTP")
