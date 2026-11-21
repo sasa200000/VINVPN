@@ -295,6 +295,24 @@ object Texts {
         "Бесплатные серверы сохранены: %d",
         "Servidores gratis guardados: %d"
     )
+    val protonSessionInvalid = p(
+        "The Proton session is not accepted yet — finish whatever the page still asks (a code, a confirmation), then press again",
+        "سیشن پروتون هنوز پذیرفته نمی‌شود — هرچه صفحه هنوز می‌خواهد (کد، تایید) را همینجا تمام کنید، بعد دوباره بزنید",
+        "Сессия Proton пока не принимается — завершите на странице всё, что она просит (код, подтверждение), затем нажмите снова",
+        "La sesión de Proton aún no se acepta: termina en la página lo que pida (código, confirmación) y vuelve a pulsar"
+    )
+    val protonSessionGone = p(
+        "The Proton session is gone — sign in again",
+        "سیشن پروتون از بین رفت — دوباره وارد شوید",
+        "Сессия Proton исчезла — войдите снова",
+        "La sesión de Proton desapareció: inicia sesión otra vez"
+    )
+    val protonPageSteps = p(
+        "The sign-in page still wants a step from you (a code or a confirmation) — do it right there, the app waits",
+        "صفحه ورود هنوز یک مرحله از شما می‌خواهد (کد یا تایید) — همینجا انجامش دهید، اپ صبر می‌کند",
+        "Страница входа ещё ждёт вашего шага (код или подтверждение) — сделайте его там, приложение ждёт",
+        "La página de inicio aún espera un paso tuyo (código o confirmación): hazlo allí, la app espera"
+    )
     val protonRetry = p("Check again", "بررسی دوباره", "Проверить снова", "Comprobar de nuevo")
     val protonContinue = p(
         "Take the free servers and finish",

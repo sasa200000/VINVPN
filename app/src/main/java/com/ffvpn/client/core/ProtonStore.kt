@@ -82,10 +82,11 @@ class ProtonStore(context: Context) {
      * that exists) and the browser the page appeared as. Both travel with
      * every later fetch; blank falls back inside [ProtonApi].
      */
-    fun saveMeta(version: String, userAgent: String) {
+    fun saveMeta(version: String, userAgent: String, pageUid: String = "") {
         prefs.edit()
             .putString(KEY_VERSION, version)
             .putString(KEY_UA, userAgent)
+            .putString(KEY_PAGE_UID, pageUid)
             .apply()
     }
 
@@ -94,12 +95,15 @@ class ProtonStore(context: Context) {
      * page reached Proton with, or the line itself) and keeps the answer.
      * Runs off the main thread; blocking.
      */
-    suspend fun fetchAndSave(proxy: Proxy): ProtonApi.Outcome = withContext(Dispatchers.IO) {
+    suspend fun fetchAndSave(proxy: Proxy, pageUid: String? = null): ProtonApi.Outcome =
+        withContext(Dispatchers.IO) {
+        val uid = pageUid ?: prefs.getString(KEY_PAGE_UID, "").orEmpty().ifBlank { null }
         val out = ProtonApi.takeFreeServers(
             proxy,
             prefs.getString(KEY_VERSION, "").orEmpty(),
             prefs.getString(KEY_UA, "").orEmpty().ifBlank { ProtonApi.USER_AGENT },
-            endpoints(), key()
+            endpoints(), key(),
+            pageUid = uid
         )
         if (out is ProtonApi.Outcome.Got) {
             // A new key means every config was made with it: the old ones go.
@@ -121,6 +125,7 @@ class ProtonStore(context: Context) {
         private const val KEY_INDEX = "idx"
         private const val KEY_VERSION = "page_version"
         private const val KEY_UA = "page_ua"
+        private const val KEY_PAGE_UID = "page_uid"
         private val ENDPOINT = Regex("""Endpoint = (\S+)""")
     }
 }

@@ -143,6 +143,7 @@ object ProtonApi {
             // Every sign-in leaves its own AUTH cookie (six on one phone after a few tries), and an
             // older one is refused with "insufficient scope": the page's own session goes first.
             val uids = sessions().let { all -> if (pageUid != null && pageUid in all) listOf(pageUid) + (all - pageUid) else all }
+            log("fetch: via ${proxy.type()}, version=${version.ifBlank { FALLBACK_VERSION }}, sessions=${uids.size}")
             if (uids.isEmpty()) return@withContext Outcome.NotSignedIn
             val cookies = runCatching { CookieManager.getInstance().getCookie(COOKIE_URL) }.getOrNull().orEmpty()
             val http = OkHttpClient.Builder().proxy(proxy)
@@ -340,7 +341,14 @@ object ProtonApi {
     }
 
     /** Steps only: no cookie, key or session id is ever written. */
-    private fun log(line: String) { runCatching { android.util.Log.i("ProtonApi", line) } }
+    private fun log(line: String) {
+        runCatching {
+            android.util.Log.i("ProtonApi", line)
+            // The app log is where failures get read from — a status code
+            // that only reached logcat might as well not have happened.
+            com.ffvpn.client.core.AppState.log("proton api: $line")
+        }
+    }
 
     private fun b64(bytes: ByteArray): String = Base64.encodeToString(bytes, Base64.NO_WRAP)
 }

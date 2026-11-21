@@ -260,40 +260,62 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
         problem = Texts.protonHelperFailed
     }
 
-    // The sign-in the page completes: the session is a cookie, so watching for
-    // it is the whole handshake. Once it appears, the servers are taken right
-    // away through the route that got the page there.
+    // The sign-in the page completes. A cookie is NOT the end of it: Proton
+    // sets it at the password, and may still want a code or a confirmation on
+    // the page — so the page stays open until it says it is done (a persisted
+    // session, or a URL away from /login). Then one automatic fetch, through
+    // the route that got the page there; a refusal is shown, not retried into
+    // a loop, and the button below is the way to try again.
     LaunchedEffect(refresh) {
         if (signedIn) return@LaunchedEffect
+        var autoTried = false
+        var cookieSeenAt = 0L
+        var hinted = false
         while (true) {
             delay(1_000)
-            val now = withContext(Dispatchers.IO) {
+            val cookie = withContext(Dispatchers.IO) {
                 runCatching { ProtonApi.signedIn() }.getOrDefault(false)
             }
-            if (now) {
-                // The flip below tears the page down: take its version and
-                // browser identity first — `x-pm-appversion` must name a
-                // dashboard release that exists, or the API refuses everything.
-                val version = withContext(Dispatchers.Main) { pageVersion(webView) }
-                val ua = webView?.settings?.userAgentString.orEmpty()
-                withContext(Dispatchers.IO) { store.saveMeta(version, ua) }
-                signedIn = true
-                fetch(context, store) { fetching = it }?.let { outcome ->
-                    when (outcome) {
-                        is ProtonApi.Outcome.Got,
-                        is ProtonApi.Outcome.NothingNew -> onDone()
-                        is ProtonApi.Outcome.NotSignedIn,
-                        is ProtonApi.Outcome.Expired -> {
-                            signedIn = false
-                            refresh++
-                        }
-                        is ProtonApi.Outcome.Failed -> {
-                            problem = "${Texts.protonFetchFailed}: ${outcome.detail}"
-                        }
+            if (!cookie) continue
+            if (cookieSeenAt == 0L) cookieSeenAt = System.currentTimeMillis()
+            val meta = withContext(Dispatchers.Main) { pageMeta(webView) }
+            val (version, uid, pageDone) = meta
+            if (!pageDone) {
+                if (!hinted && System.currentTimeMillis() - cookieSeenAt > 12_000) {
+                    hinted = true
+                    problem = Texts.protonPageSteps
+                }
+                continue
+            }
+            // The flip below tears the page down: take what it says about
+            // itself first — `x-pm-appversion` must name a dashboard release
+            // that exists, and the page's own session id orders the cookies.
+            val ua = webView?.settings?.userAgentString.orEmpty()
+            withContext(Dispatchers.IO) { store.saveMeta(version, ua, uid) }
+            signedIn = true
+            if (autoTried) break
+            autoTried = true
+            fetch(context, store) { fetching = it }?.let { outcome ->
+                when (outcome) {
+                    is ProtonApi.Outcome.Got,
+                    is ProtonApi.Outcome.NothingNew -> onDone()
+                    is ProtonApi.Outcome.NotSignedIn -> {
+                        // The cookie is gone: back to the page, once.
+                        signedIn = false
+                        refresh++
+                    }
+                    is ProtonApi.Outcome.Expired -> {
+                        // Present but refused (a session Proton still holds a
+                        // step over): stay here and say it — the page is gone
+                        // already, so the button retries with what we have.
+                        problem = Texts.protonSessionInvalid
+                    }
+                    is ProtonApi.Outcome.Failed -> {
+                        problem = "${Texts.protonFetchFailed}: ${outcome.detail}"
                     }
                 }
-                break
             }
+            break
         }
     }
 
@@ -376,10 +398,12 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
                                 when (outcome) {
                                     is ProtonApi.Outcome.Got,
                                     is ProtonApi.Outcome.NothingNew -> onDone()
-                                    is ProtonApi.Outcome.NotSignedIn,
-                                    is ProtonApi.Outcome.Expired -> {
+                                    is ProtonApi.Outcome.NotSignedIn -> {
                                         signedIn = false
                                         refresh++
+                                    }
+                                    is ProtonApi.Outcome.Expired -> {
+                                        problem = Texts.protonSessionInvalid
                                     }
                                     is ProtonApi.Outcome.Failed -> {
                                         problem = "${Texts.protonFetchFailed}: ${outcome.detail}"
@@ -644,7 +668,15 @@ private suspend fun fetch(
     val proxy = withContext(Dispatchers.IO) {
         ProtonAccess.current()?.javaProxy() ?: Proxy.NO_PROXY
     }
-    val out = runCatching { store.fetchAndSave(proxy) }.getOrNull()
+    val out = try {
+        store.fetchAndSave(proxy)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // A refresh that cancelled this attempt: not a failure, and not to be
+        // logged as one — the effect that cancelled it has moved on.
+        throw e
+    } catch (t: Throwable) {
+        null
+    }
     onBusy(false)
     // The log is where the next failure is read from — every outcome, not
     // only the ones the screen can show.
@@ -652,8 +684,8 @@ private suspend fun fetch(
         "proton sign-in fetch: " + when (out) {
             is ProtonApi.Outcome.Got -> "${out.confs.size} servers"
             is ProtonApi.Outcome.NothingNew -> "nothing new"
-            is ProtonApi.Outcome.NotSignedIn,
-            is ProtonApi.Outcome.Expired -> "not signed in / expired"
+            is ProtonApi.Outcome.NotSignedIn -> "no session in the cookie jar"
+            is ProtonApi.Outcome.Expired -> "session refused (code/scope)"
             is ProtonApi.Outcome.Failed -> "failed: ${out.detail}"
             null -> "store error"
         }
@@ -661,28 +693,46 @@ private suspend fun fetch(
     return out
 }
 
+/** What the page says about itself, in one read — see [pageMeta]. */
+private data class PageMeta(val version: String, val uid: String, val done: Boolean)
+
 /**
- * The dashboard's version as the page reports it (`SENTRY_RELEASE.id`), ""
- * when it does not say or does not look like one. Read while the page is
- * still alive: signing in flips the screen and disposes the WebView.
+ * The dashboard's release (`SENTRY_RELEASE.id` — what `x-pm-appversion` must
+ * name), the persisted session id (the `ps-<n>` entries the dashboard writes
+ * only when a sign-in has fully completed — including any code Proton
+ * wanted), and whether the URL has left the sign-in flow. All three are read
+ * while the page is still alive: signing in flips the screen and disposes the
+ * WebView.
  */
-private suspend fun pageVersion(view: WebView?): String = withTimeoutOrNull(3_000) {
-    suspendCancellableCoroutine { cont ->
-        if (view == null) {
-            cont.resume("")
-            return@suspendCancellableCoroutine
-        }
-        try {
-            view.evaluateJavascript("(window.SENTRY_RELEASE&&SENTRY_RELEASE.id)||''") { raw ->
-                val v = raw?.trim()?.trim('"').orEmpty()
-                val ok = RELEASE_PATTERN.matches(v)
-                if (cont.isActive) cont.resume(if (ok) v else "")
+private suspend fun pageMeta(view: WebView?): PageMeta {
+    if (view == null) return PageMeta("", "", true)
+    val raw = withTimeoutOrNull(3_000) {
+        suspendCancellableCoroutine<String> { cont ->
+            try {
+                view.evaluateJavascript(PAGE_META_JS) { r ->
+                    if (cont.isActive) cont.resume(r ?: "")
+                }
+            } catch (t: Throwable) {
+                if (cont.isActive) cont.resume("")
             }
-        } catch (t: Throwable) {
-            if (cont.isActive) cont.resume("")
         }
-    }
-}.orEmpty()
+    } ?: return PageMeta("", "", false)
+    val body = raw.trim().trim('"')
+    val version = body.substringBefore('|')
+    val uid = body.substringAfter('|', "")
+    val url = view.url
+    val done = uid.isNotBlank() || (url != null && !url.contains("/login"))
+    return PageMeta(if (RELEASE_PATTERN.matches(version)) version else "", uid, done)
+}
+
+/** The one evaluate: version, persisted session id, joined by a pipe. */
+private const val PAGE_META_JS = """(function(){try{
+var v=(window.SENTRY_RELEASE&&SENTRY_RELEASE.id)||'';
+var best='',at=-1;
+for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(!/^ps-\d+$/.test(k))continue;
+var o=JSON.parse(localStorage.getItem(k)||'{}');var t=o.persistedAt||0;
+if(o.UID&&t>=at){best=o.UID;at=t;}}
+return v+'|'+best;}catch(e){return '|';}})()"""
 
 private val RELEASE_PATTERN = Regex("""\d+\.\d+\.\d+\.\d+""")
 

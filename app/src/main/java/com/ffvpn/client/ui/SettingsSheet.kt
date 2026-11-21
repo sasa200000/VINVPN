@@ -732,15 +732,21 @@ fun SettingsSheet(
                                 val store = ProtonStore(context)
                                 val proxy = ProtonAccess.current()?.javaProxy()
                                     ?: java.net.Proxy.NO_PROXY
-                                val out = runCatching { store.fetchAndSave(proxy) }.getOrNull()
+                                val out = try {
+                                    store.fetchAndSave(proxy)
+                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                    throw e
+                                } catch (t: Throwable) {
+                                    null
+                                }
                                 fetchingServers = false
                                 val (line, err) = when (out) {
                                     is ProtonApi.Outcome.Got ->
                                         Texts.protonSavedCount.replace("%d", out.confs.size.toString()) to false
                                     is ProtonApi.Outcome.NothingNew ->
                                         Texts.protonSavedCount.replace("%d", store.confs().size.toString()) to false
-                                    is ProtonApi.Outcome.NotSignedIn,
-                                    is ProtonApi.Outcome.Expired -> Texts.protonSignInNeeded to true
+                                    is ProtonApi.Outcome.NotSignedIn -> Texts.protonSessionGone to true
+                                    is ProtonApi.Outcome.Expired -> Texts.protonSessionInvalid to true
                                     is ProtonApi.Outcome.Failed ->
                                         "${Texts.protonFetchFailed}: ${out.detail}" to true
                                     null -> Texts.protonFetchFailed to true
