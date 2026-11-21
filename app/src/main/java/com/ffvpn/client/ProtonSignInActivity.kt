@@ -80,7 +80,7 @@ class ProtonSignInActivity : ComponentActivity() {
     var onHelperConsent: ((Boolean) -> Unit)? = null
 
     private val consent = registerForActivityResult(
-        ActivityResultContracts.StartActivity()
+        ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val ok = result.resultCode == RESULT_OK
         if (ok) runHelper() else pendingHelper = null
