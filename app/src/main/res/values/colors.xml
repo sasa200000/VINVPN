@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sandstone face of the rosette mark, so the adaptive icon has no black plate. -->
-    <color name="ic_launcher_background">#C99B58</color>
+    <!-- Near-black plate behind the neon shield, matching the logo background. -->
+    <color name="ic_launcher_background">#010207</color>
 </resources>
