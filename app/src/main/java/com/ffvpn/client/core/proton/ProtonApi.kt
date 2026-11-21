@@ -48,7 +48,7 @@ object ProtonApi {
     private const val COOKIE_URL = "$BASE/api/"
     /** The dashboard's own client id; its version is read from the page (it moves with every release). */
     private const val CLIENT_ID = "web-vpn-settings"
-    const val FALLBACK_VERSION = "5.0.421.0"
+    const val FALLBACK_VERSION = "5.0.426.1"
     /** What the configs are listed as in the account's dashboard. */
     const val DEVICE_NAME = "VINVPN"
     /** The page's own browser identity, so the API sees the calls the dashboard makes. */

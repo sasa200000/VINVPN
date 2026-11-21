@@ -77,13 +77,29 @@ class ProtonStore(context: Context) {
     }
 
     /**
+     * What the sign-in page reported about itself: the dashboard's release
+     * (`SENTRY_RELEASE.id` — the API's `x-pm-appversion` must name a version
+     * that exists) and the browser the page appeared as. Both travel with
+     * every later fetch; blank falls back inside [ProtonApi].
+     */
+    fun saveMeta(version: String, userAgent: String) {
+        prefs.edit()
+            .putString(KEY_VERSION, version)
+            .putString(KEY_UA, userAgent)
+            .apply()
+    }
+
+    /**
      * Takes the account's free servers through [proxy] (the route the sign-in
      * page reached Proton with, or the line itself) and keeps the answer.
      * Runs off the main thread; blocking.
      */
     suspend fun fetchAndSave(proxy: Proxy): ProtonApi.Outcome = withContext(Dispatchers.IO) {
         val out = ProtonApi.takeFreeServers(
-            proxy, "", ProtonApi.USER_AGENT, endpoints(), key()
+            proxy,
+            prefs.getString(KEY_VERSION, "").orEmpty(),
+            prefs.getString(KEY_UA, "").orEmpty().ifBlank { ProtonApi.USER_AGENT },
+            endpoints(), key()
         )
         if (out is ProtonApi.Outcome.Got) {
             // A new key means every config was made with it: the old ones go.
@@ -103,6 +119,8 @@ class ProtonStore(context: Context) {
         private const val KEY_KEY = "key"
         private const val KEY_V6 = "v6"
         private const val KEY_INDEX = "idx"
+        private const val KEY_VERSION = "page_version"
+        private const val KEY_UA = "page_ua"
         private val ENDPOINT = Regex("""Endpoint = (\S+)""")
     }
 }

@@ -58,7 +58,10 @@ import com.ffvpn.client.ui.VinTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import org.json.JSONObject
 import java.net.Proxy
 
@@ -268,6 +271,12 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
                 runCatching { ProtonApi.signedIn() }.getOrDefault(false)
             }
             if (now) {
+                // The flip below tears the page down: take its version and
+                // browser identity first — `x-pm-appversion` must name a
+                // dashboard release that exists, or the API refuses everything.
+                val version = withContext(Dispatchers.Main) { pageVersion(webView) }
+                val ua = webView?.settings?.userAgentString.orEmpty()
+                withContext(Dispatchers.IO) { store.saveMeta(version, ua) }
                 signedIn = true
                 fetch(context, store) { fetching = it }?.let { outcome ->
                     when (outcome) {
@@ -639,6 +648,31 @@ private suspend fun fetch(
     onBusy(false)
     return out
 }
+
+/**
+ * The dashboard's version as the page reports it (`SENTRY_RELEASE.id`), ""
+ * when it does not say or does not look like one. Read while the page is
+ * still alive: signing in flips the screen and disposes the WebView.
+ */
+private suspend fun pageVersion(view: WebView?): String = withTimeoutOrNull(3_000) {
+    suspendCancellableCoroutine { cont ->
+        if (view == null) {
+            cont.resume("")
+            return@suspendCancellableCoroutine
+        }
+        try {
+            view.evaluateJavascript("(window.SENTRY_RELEASE&&SENTRY_RELEASE.id)||''") { raw ->
+                val v = raw?.trim()?.trim('"').orEmpty()
+                val ok = RELEASE_PATTERN.matches(v)
+                if (cont.isActive) cont.resume(if (ok) v else "")
+            }
+        } catch (t: Throwable) {
+            if (cont.isActive) cont.resume("")
+        }
+    }
+}.orEmpty()
+
+private val RELEASE_PATTERN = Regex("""\d+\.\d+\.\d+\.\d+""")
 
 private const val SIGN_IN_PAGE = "https://account.protonvpn.com/login"
 
