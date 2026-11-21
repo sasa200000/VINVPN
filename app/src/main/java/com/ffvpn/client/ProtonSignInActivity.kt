@@ -2,8 +2,8 @@ package com.ffvpn.client
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.net.VpnService
 import android.os.Bundle
 import android.webkit.WebView
@@ -18,14 +18,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ffvpn.client.core.AppState
@@ -54,22 +59,29 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.net.Proxy
 
 /**
- * Proton's own sign-in page, inside the app — and with it, account creation:
- * the page's «Create account» flow runs here whole (the email code, the CAPTCHA
- * and all), and Proton's password stays between the person and Proton; the app
- * only ever sees the session cookie the page leaves behind. A session made in
- * a browser cannot come here — cookie stores do not share — so the page has to
- * open, which on a filtered line needs a route.
+ * Proton sign-in inside the app, as an account the person already made:
+ * email + password typed into this screen's own form, and the form drives
+ * Proton's real sign-in page underneath it — the URL carries the email, a
+ * script fills the password when the page shows it and presses Sign in, and
+ * whatever Proton then asks for (its device check, a code) is right there on
+ * the visible page for the person to do. The password goes into the page's
+ * field, not into an API call: Proton's login is a challenge protocol the app
+ * does not reimplement, and the page handles it exactly as a browser would.
  *
- * The route is the running core's local SOCKS listener ([ProtonAccess]), which
- * the WebView is pointed at while the page is open. When nothing is running
- * and the line cannot reach Proton directly, this screen says so and starts a
- * helper engine itself — one tap, consent, wait for the tunnel — instead of
- * sending the person to the engine list to guess. Right after the sign-in is
- * detected, the free servers are taken through that same route and saved.
+ * The session that comes out is the page's own cookie (the password still
+ * never reaches the app's own stores), and right after it appears the free
+ * servers are taken through the route the page used. A session made in an
+ * outside browser cannot be imported here — cookie stores do not share — so
+ * this screen, not the browser, is where the account joins the app.
+ *
+ * On a filtered line the page needs a route: the running core's local SOCKS
+ * ([ProtonAccess]) which the WebView is pointed at while the page is open, or
+ * — when nothing is running and the line cannot reach Proton — the helper
+ * engine this screen starts itself with one tap.
  */
 class ProtonSignInActivity : ComponentActivity() {
 
@@ -149,9 +161,20 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
     var refresh by remember { mutableStateOf(0) }
     var needHelper by remember { mutableStateOf(false) }
     var waitingHelper by remember { mutableStateOf(false) }
+    var formEmail by remember { mutableStateOf("") }
+    var formPass by remember { mutableStateOf("") }
+
+    /**
+     * The address the page loads for, set the moment «افزودن حساب» is pressed:
+     * the email rides in the URL (the page prefills itself), the password goes
+     * in through the script only when there is one — a blank password means
+     * «open the page», nothing is driven.
+     */
+    var submitted by remember { mutableStateOf<String?>(null) }
 
     val store = remember { ProtonStore(context) }
     val scope = rememberCoroutineScope()
+    var webView by remember { mutableStateOf<WebView?>(null) }
     // The person's own engine, unless it is Proton itself — then the one built
     // for getting past exactly this kind of block.
     val helperId = remember {
@@ -181,6 +204,7 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
             ProtonAccess.clearWebViewProxy()
             pageReady = true
         } else {
+            loading = false
             needHelper = true
         }
     }
@@ -264,6 +288,22 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
         }
     }
 
+    // The driver's device-check flag: said here, in words, when it appears.
+    LaunchedEffect(pageReady, submitted) {
+        while (!signedIn) {
+            delay(2_000)
+            val view = webView ?: continue
+            if (submitted == null) continue
+            withContext(Dispatchers.Main) {
+                view.evaluateJavascript("(window.__vinvn_captcha||0)") { r ->
+                    if (r == "\"1\"" && problem == null) {
+                        problem = Texts.protonCaptchaNote
+                    }
+                }
+            }
+        }
+    }
+
     BackHandler { activity?.finish() }
 
     Column(
@@ -286,12 +326,6 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
                 Text(Texts.actionCancel)
             }
         }
-        Text(
-            text = Texts.protonSignInHint,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp)
-        )
         if (loading || fetching || waitingHelper) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
@@ -368,68 +402,146 @@ private fun ProtonSignInScreen(onDone: () -> Unit) {
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(Texts.protonSignOut) }
             }
-        } else if (needHelper) {
-            // The line cannot reach Proton and nothing is running: one button
-            // starts the helper and waits for it here, in front of the page
-            // that needs it, instead of sending the person elsewhere to guess.
+        } else {
+            // The form the person fills: the account was made in a browser,
+            // and this is where it joins the app.
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 4.dp)
             ) {
-                Text(
-                    text = Texts.protonHelperNeed,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                OutlinedTextField(
+                    value = formEmail,
+                    onValueChange = { formEmail = it },
+                    label = { Text(Texts.protonEmail) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(8.dp))
+                OutlinedTextField(
+                    value = formPass,
+                    onValueChange = { formPass = it },
+                    label = { Text(Texts.protonPassword) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.size(10.dp))
                 Button(
                     onClick = {
+                        if (formEmail.isBlank()) {
+                            problem = Texts.protonEmailNeeded
+                            return@Button
+                        }
                         problem = null
-                        waitingHelper = true
-                        activity?.startHelper(helperId)
+                        // The URL carries the email; the script (armed with the
+                        // password) fills the password step when it appears.
+                        submitted = "$SIGN_IN_PAGE?username=${Uri.encode(formEmail.trim())}"
+                        // No route and no direct path: the form's own button
+                        // starts the helper too, so one tap does the whole job.
+                        if (needHelper && !waitingHelper) {
+                            waitingHelper = true
+                            activity?.startHelper(helperId)
+                        }
                     },
-                    enabled = !waitingHelper,
+                    enabled = !waitingHelper && !fetching,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (waitingHelper) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(Modifier.size(10.dp))
-                        Text(Texts.protonWaitingHelper)
-                    } else {
-                        Text("${Texts.protonStartHelper} (${Texts.coreName(helperId)})")
-                    }
-                }
-                TextButton(
-                    onClick = {
-                        problem = null
-                        refresh++
-                    },
-                    enabled = !waitingHelper,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(Texts.protonRetry) }
+                ) { Text(Texts.protonAddAccount) }
+                Text(
+                    text = Texts.protonSignInHint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
-        } else if (pageReady) {
-            AndroidView(
-                factory = { ctx -> createPage(ctx) { loading = false } },
-                update = { if (signedIn) it.stopLoading() },
-                modifier = Modifier.fillMaxSize()
-            )
+
+            if (needHelper) {
+                // The line cannot reach Proton and nothing is running: one
+                // button starts the helper and waits for it here, in front of
+                // the page that needs it, instead of sending the person
+                // elsewhere to guess.
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = Texts.protonHelperNeed,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Button(
+                        onClick = {
+                            problem = null
+                            waitingHelper = true
+                            activity?.startHelper(helperId)
+                        },
+                        enabled = !waitingHelper,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (waitingHelper) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.size(10.dp))
+                            Text(Texts.protonWaitingHelper)
+                        } else {
+                            Text("${Texts.protonStartHelper} (${Texts.coreName(helperId)})")
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            problem = null
+                            refresh++
+                        },
+                        enabled = !waitingHelper,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(Texts.protonRetry) }
+                }
+            } else if (pageReady) {
+                AndroidView(
+                    factory = { ctx ->
+                        val start = submitted ?: SIGN_IN_PAGE
+                        createPage(ctx, start, { loading = false }) {
+                            buildDriveScript(formEmail, formPass, submitted)
+                        }.also { webView = it }
+                    },
+                    update = { view ->
+                        val target = submitted
+                        if (target != null && view.tag != target) {
+                            view.tag = target
+                            view.loadUrl(target)
+                        }
+                        if (signedIn) view.stopLoading()
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            }
         }
     }
 }
 
 /**
- * The page itself. No hooks, no bridges: Proton's own sign-in runs as in a
- * browser, and the session shows up as a cookie — which is the only thing the
- * screen reads.
+ * The page itself, and the driver: once a form was submitted, every page load
+ * re-arms [drive] — the script that walks Proton's own sign-in (email in the
+ * URL, password into the field when the step shows, Sign in pressed once) and
+ * leaves whatever Proton then asks of the device to the person, on the page.
  */
 @SuppressLint("SetJavaScriptEnabled")
-private fun createPage(context: Context, onLoaded: () -> Unit): WebView {
+private fun createPage(
+    context: Context,
+    startUrl: String,
+    onLoaded: () -> Unit,
+    drive: () -> String?,
+): WebView {
     val view = WebView(context)
     view.settings.javaScriptEnabled = true
     view.settings.domStorageEnabled = true
@@ -440,11 +552,73 @@ private fun createPage(context: Context, onLoaded: () -> Unit): WebView {
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
+            // Armed only when the form was filled: with no submission the page
+            // stays exactly as a person left it.
+            drive()?.let { js -> view.evaluateJavascript(js, null) }
             onLoaded()
         }
     }
-    view.loadUrl(SIGN_IN_PAGE)
+    view.tag = startUrl
+    view.loadUrl(startUrl)
     return view
+}
+
+/**
+ * The script that finishes the sign-in the form started. Two steps on one
+ * page: Continue (unless the URL already advanced it), then the password
+ * field. React needs the native value setter and a bubbling input event, the
+ * button is found by what it says (English or Persian), and a device check
+ * Proton shows is never clicked through — that one is left to the person,
+ * with a note on this screen.
+ */
+private fun buildDriveScript(email: String, password: String, submitted: String?): String? {
+    if (submitted == null || password.isBlank() || email.isBlank()) return null
+    val em = JSONObject.quote(email.trim())
+    val pw = JSONObject.quote(password)
+    // The run id changes when the form is submitted again with other words,
+    // so a second attempt is not blocked by the first one's once-only guards.
+    return """
+        (function(){
+          var em=$em, pw=$pw;
+          function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);sessionStorage.setItem(k,v);}catch(e){return null;}return null;}
+          var run=em+'|'+pw;
+          if(ss('vinvn_run')!==run){ss('vinvn_run',run);ss('vinvn_go',null);ss('vinvn_si',null);}
+          function set(el,val){
+            try{
+              var d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+              if(d&&d.set){d.set.call(el,val);}else{el.value=val;}
+            }catch(e){el.value=val;}
+            el.dispatchEvent(new Event('input',{bubbles:true}));
+            el.dispatchEvent(new Event('change',{bubbles:true}));
+          }
+          function vis(b){return !!(b&&(b.offsetParent||b.getClientRects().length));}
+          function subs(){return Array.prototype.slice.call(document.querySelectorAll('button[type=submit],input[type=submit]')); }
+          function btn(re){var a=subs().filter(vis);for(var i=0;i<a.length;i++){var t=(a[i].innerText||a[i].value||'');if(re.test(t))return a[i];}return null;}
+          function captcha(){return !!document.querySelector('iframe[src*=captcha],iframe[src*=hcaptcha],.h-captcha,[class*=captcha] iframe');}
+          var n=0, si=false;
+          var iv=setInterval(function(){
+            if(++n>180){clearInterval(iv);return;}
+            try{
+              var u=document.querySelector('#username');
+              var p=document.querySelector('#password')||document.querySelector('input[type=password]');
+              if(u&&!u.value&&em){set(u,em);}
+              if(p&&!p.value&&pw){set(p,pw);return;}
+              if(p&&p.value&&pw&&!si){
+                if(ss('vinvn_si')){clearInterval(iv);return;}
+                if(captcha()){try{window.__vinvn_captcha=1;}catch(e){}n=0;return;}
+                var b=btn(/sign\s*in|log\s*in|ورود/i)||btn(/./);
+                if(b){si=true;ss('vinvn_si','1');try{window.__vinvn_captcha=0;}catch(e){}b.click();clearInterval(iv);}
+                return;
+              }
+              if(!p&&u&&u.value){
+                var c=btn(/continue|ادامه|بعدی/i);
+                if(c&&!captcha()){c.click();return;}
+              }
+            }catch(e){}
+          },500);
+          return 'armed';
+        })();
+    """.trimIndent()
 }
 
 /**
@@ -466,7 +640,7 @@ private suspend fun fetch(
     return out
 }
 
-private const val SIGN_IN_PAGE = "https://account.protonvpn.com/"
+private const val SIGN_IN_PAGE = "https://account.protonvpn.com/login"
 
 /** Long enough for a slow engine's own retry ladder to either land or give up. */
 private const val HELPER_WAIT_MS = 150_000L

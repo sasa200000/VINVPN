@@ -138,7 +138,7 @@ object Texts {
     )
     val protonNotSignedIn = p("Not signed in", "وارد نشده‌اید", "Не вошли", "Sin sesión")
     val protonSignedIn = p("Signed in to Proton", "وارد حساب پروتون شده‌اید", "Вы вошли в Proton", "Sesión iniciada en Proton")
-    val protonSignInAction = p("Create account / Sign in", "ایجاد حساب / ورود", "Создать аккаунт / Войти", "Crear cuenta / Entrar")
+    val protonSignInAction = p("Add account / Sign in", "افزودن حساب / ورود", "Добавить аккаунт / Войти", "Añadir cuenta / Entrar")
     val protonSignOut = p("Sign out", "خروج از حساب", "Выйти", "Cerrar sesión")
     val protonSignInNeeded = p(
         "Sign in to Proton in Settings first",
@@ -218,6 +218,26 @@ object Texts {
         "اجازه VPN داده نشد",
         "Разрешение VPN не выдано",
         "No se concedió el permiso de VPN"
+    )
+    val protonEmail = p("Email", "ایمیل", "Эл. почта", "Correo")
+    val protonPassword = p("Password", "رمز عبور", "Пароль", "Contraseña")
+    val protonAddAccount = p(
+        "Add account and sign in",
+        "افزودن حساب و ورود",
+        "Добавить аккаунт и войти",
+        "Añadir cuenta e iniciar sesión"
+    )
+    val protonEmailNeeded = p(
+        "Enter the account's email first",
+        "ابتدا ایمیل حساب را وارد کنید",
+        "Сначала введите почту аккаунта",
+        "Primero introduce el correo de la cuenta"
+    )
+    val protonCaptchaNote = p(
+        "Proton asks a check on this device: solve it on the page, then tap Sign in",
+        "پروتون روی این دستگاه یک بررسی می‌خواهد: آن را در صفحه حل کنید، بعد Sign in را بزنید",
+        "Proton запрашивает проверку: решите её на странице и нажмите Sign in",
+        "Proton pide una verificación: resuélvela en la página y pulsa Sign in"
     )
     val protonRetry = p("Check again", "بررسی دوباره", "Проверить снова", "Comprobar de nuevo")
     val protonContinue = p(
