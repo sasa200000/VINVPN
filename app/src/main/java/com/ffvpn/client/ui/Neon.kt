@@ -19,9 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -142,7 +144,7 @@ fun DrawScope.drawNeonBorder(
     val inset = stroke / 2f + 1.dp.toPx()
     val rect = Rect(inset, inset, size.width - inset, size.height - inset)
     val radius = cornerRadius.toPx()
-    val path = Path().apply { addRoundRect(rect, CornerRadius(radius)) }
+    val path = Path().apply { addRoundRect(RoundRect(rect.left, rect.top, rect.right, rect.bottom, radius, radius)) }
 
     when (shape) {
         NeonShape.RING -> drawPath(path, color, style = Stroke(stroke, cap = StrokeCap.Round))
@@ -177,20 +179,19 @@ fun DrawScope.drawNeonBorder(
 
         NeonShape.WAVE -> {
             val wavy = Path()
-            val measure = PathMeasure(path, false)
+            val measure = PathMeasure().apply { setPath(path, false) }
             val total = measure.length
-            val pos = FloatArray(2)
-            val tan = FloatArray(2)
             var started = false
             for (i in 0..WAVE_POINTS) {
                 val distance = total * i / WAVE_POINTS
-                if (!measure.getPosTan(distance, pos, tan)) continue
+                val p = measure.getPosition(distance)
+                val t = measure.getTangent(distance)
                 // Push each point along its normal so the border ripples.
-                val normalX = -tan[1]
-                val normalY = tan[0]
+                val normalX = -t.y
+                val normalY = t.x
                 val ripple = sin(distance / 26f + phase) * stroke * 1.6f
-                val x = pos[0] + normalX * ripple
-                val y = pos[1] + normalY * ripple
+                val x = p.x + normalX * ripple
+                val y = p.y + normalY * ripple
                 if (!started) {
                     wavy.moveTo(x, y)
                     started = true
@@ -256,20 +257,19 @@ fun DrawScope.drawNeonRing(
                     )
                 )
             }
-            val measure = PathMeasure(path, false)
+            val measure = PathMeasure().apply { setPath(path, false) }
             val total = measure.length
-            val pos = FloatArray(2)
-            val tan = FloatArray(2)
             val wavy = Path()
             var started = false
             for (i in 0..WAVE_POINTS) {
                 val distance = total * i / WAVE_POINTS
-                if (!measure.getPosTan(distance, pos, tan)) continue
-                val normalX = -tan[1]
-                val normalY = tan[0]
+                val p = measure.getPosition(distance)
+                val t = measure.getTangent(distance)
+                val normalX = -t.y
+                val normalY = t.x
                 val ripple = sin(distance / 24f + phase) * stroke * 1.7f
-                val x = pos[0] + normalX * ripple
-                val y = pos[1] + normalY * ripple
+                val x = p.x + normalX * ripple
+                val y = p.y + normalY * ripple
                 if (!started) {
                     wavy.moveTo(x, y)
                     started = true
