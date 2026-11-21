@@ -102,7 +102,14 @@ dependencies {
 
     // AmneziaWG for the Proton core: the tunnel backend (libam-go) and, with it,
     // okhttp (the Proton account API) and the WebView proxy override support.
-    implementation("com.zaneschepke:amneziawg-android:2.1.13")
+    // hevtunnel (a transitive) asks for androidx.core 1.17, which wants compile
+    // SDK 36 and AGP 8.9 — this project builds on 35 and 8.7, and its own core
+    // (1.13.1, above) is what stays in the graph. The tunnel path this app runs
+    // never enters hevtunnel's own code.
+    implementation("com.zaneschepke:amneziawg-android:2.1.13") {
+        exclude(group = "androidx.core", module = "core-ktx")
+        exclude(group = "androidx.core", module = "core")
+    }
     implementation("androidx.webkit:webkit:1.11.0")
 
     implementation("androidx.core:core-ktx:1.13.1")
