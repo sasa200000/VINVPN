@@ -189,6 +189,37 @@ object Texts {
         "Этот WebView не поддерживает прокси — страница может не открыться",
         "Este WebView no admite proxy: puede que la página no abra"
     )
+    val protonHelperNeed = p(
+        "This line cannot reach Proton by itself. Start a helper connection here and the page opens on it — the helper stays until you turn it off.",
+        "این خط خودش به پروتون نمی‌رسد. اینجا یک اتصال کمکی روشن کنید تا صفحه روی آن باز شود — کمکی تا وقتی خاموشش نکنید می‌ماند.",
+        "Эта линия сама до Proton не доходит. Включите здесь вспомогательное подключение — страница откроется через него.",
+        "Esta línea no llega a Proton por sí sola. Enciende aquí una conexión auxiliar y la página se abrirá con ella."
+    )
+    val protonStartHelper = p(
+        "Start helper connection",
+        "روشن کردن اتصال کمکی",
+        "Включить вспомогательное подключение",
+        "Iniciar conexión auxiliar"
+    )
+    val protonWaitingHelper = p(
+        "Connecting...",
+        "در حال اتصال...",
+        "Подключение...",
+        "Conectando..."
+    )
+    val protonHelperFailed = p(
+        "The helper connection did not come up — turn on another engine from the home screen and try again",
+        "اتصال کمکی وصل نشد — از صفحه اصلی موتور دیگری را روشن کنید و دوباره تلاش کنید",
+        "Вспомогательное подключение не поднялось — включите другой движок на главном экране",
+        "La conexión auxiliar no subió: enciende otro motor en la pantalla principal"
+    )
+    val protonConsentDenied = p(
+        "VPN permission was not granted",
+        "اجازه VPN داده نشد",
+        "Разрешение VPN не выдано",
+        "No se concedió el permiso de VPN"
+    )
+    val protonRetry = p("Check again", "بررسی دوباره", "Проверить снова", "Comprobar de nuevo")
     val protonContinue = p(
         "Take the free servers and finish",
         "دریافت سرورهای رایگان و پایان",
