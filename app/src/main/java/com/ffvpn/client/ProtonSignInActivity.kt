@@ -580,7 +580,7 @@ private fun buildDriveScript(email: String, password: String, submitted: String?
     return """
         (function(){
           var em=$em, pw=$pw;
-          function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);sessionStorage.setItem(k,v);}catch(e){return null;}return null;}
+          function ss(k,v){try{if(v===undefined)return sessionStorage.getItem(k);if(v===null){sessionStorage.removeItem(k);return null;}sessionStorage.setItem(k,v);}catch(e){return null;}return null;}
           var run=em+'|'+pw;
           if(ss('vinvn_run')!==run){ss('vinvn_run',run);ss('vinvn_go',null);ss('vinvn_si',null);}
           function set(el,val){
