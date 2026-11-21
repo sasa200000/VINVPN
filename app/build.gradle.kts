@@ -92,6 +92,22 @@ android {
     }
 }
 
+// amneziawg-android drags okhttp 5.x, whose kotlin-stdlib 2.2.0 carries class
+// metadata this project's Kotlin 1.9.24 cannot read (it stops at 2.0) — every
+// Kotlin file in the app then fails to compile. The Proton account API is
+// written against okhttp 4.x (same API, metadata 1.8, readable), and the DNS
+// over HTTPS okhttp is even there for never runs here: this app's configs point
+// at plain IPs, so endpoint resolution never enters that path.
+configurations.all {
+    resolutionStrategy {
+        force("com.squareup.okhttp3:okhttp:4.12.0")
+        force("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    }
+}
+
 dependencies {
     // The official Psiphon engine for Android (gomobile psi.Psi), published as a
     // release artifact by Psiphon-Labs/psiphon-tunnel-core-binaries. The engine
