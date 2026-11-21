@@ -86,12 +86,12 @@ object Neon {
         shape = runCatching { NeonShape.valueOf(Prefs.neonShape) }.getOrDefault(NeonShape.RING)
     }
 
-    fun setEnabled(value: Boolean) {
+    fun updateEnabled(value: Boolean) {
         enabled = value
         Prefs.neonDance = value
     }
 
-    fun setShape(value: NeonShape) {
+    fun updateShape(value: NeonShape) {
         shape = value
         Prefs.neonShape = value.name
     }

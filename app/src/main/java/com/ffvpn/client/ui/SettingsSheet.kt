@@ -286,7 +286,7 @@ fun SettingsSheet(
                     title = Texts.neonTitle,
                     subtitle = Texts.neonToggleHint,
                     checked = Neon.enabled,
-                    onChange = { Neon.setEnabled(it) }
+                    onChange = { Neon.updateEnabled(it) }
                 )
                 if (Neon.enabled) {
                     Text(
@@ -299,7 +299,7 @@ fun SettingsSheet(
                             label = Texts.neonShapeName(shape),
                             selected = Neon.shape == shape
                         ) {
-                            Neon.setShape(shape)
+                            Neon.updateShape(shape)
                         }
                     }
                 }
